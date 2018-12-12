@@ -1,8 +1,10 @@
 package andbook.example.mobileproject;
 
 import android.app.FragmentManager;
+import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -37,8 +39,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     GoogleMap mMap;
     private String htmlPageUrl = "https://search.naver.com/search.naver?sm=top_hty&fbm=0&ie=utf8&query=서울특별시+중구+의주로2가+어린이집"; //파싱할 홈페이지의 URL주소
     private TextView textviewHtmlDocument;
+    private TextView textView;
     private String htmlContentInStringFormat="";
+    String addr1="";
+    String addr2="";
+    String addr3="";
+    String addr4="";
+    String curAddress="";
     int cnt=0;
+    String allText="";
+    String[] onlyName=null;
+    String[] onlyAddress=null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,13 +64,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
     public void mOnClick(View v){
-
+        //해당 주소 얻기
         CameraPosition carPos=mMap.getCameraPosition();
         System.out.println("latitude:::::::::::::::::::::::::::::"+ carPos.target.latitude);
         System.out.println("longitude:"+ carPos.target.longitude);
         textviewHtmlDocument = (TextView)findViewById(R.id.text_crawling);
         textviewHtmlDocument.setMovementMethod(new ScrollingMovementMethod()); //스크롤 가능한 텍스트뷰로 만들기
-
+        textView=(TextView) findViewById(R.id.text_crawling);
         final Geocoder geocoder = new Geocoder(this);
         // 위도,경도 입력 후 변환 버튼 클릭
         List<Address> list = null;
@@ -79,13 +90,62 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             if (list.size()==0) {
                 tv.setText("해당되는 주소 정보는 없습니다");
             } else {
+                //주소 파싱
                 tv.setText(list.get(0).toString());
                 System.out.println("----------------------------");
+                //앞부분
+                String address = list.get(0).toString().split("]")[0];
+                //뒷부분
+                address = address.split("\"")[1].trim();
+                curAddress=address;
+                tv.setText(curAddress);
+                String[] address2 = address.split(" ");
+                for(int i=0; i<address2.length;i++){
+                    if(address2[1].trim()=="경기도"){
+                        //경기도일 때
+                        addr1="경기도";
+                        switch(i){
+                            case 2:
+                                //시
+                                addr2=address2[i].trim();
+                                break;
+                            case 3:
+                                //시
+                                addr3=address2[i].trim();
+                                break;
+                            case 4:
+                                //시
+                                addr4=address2[i].trim();
+                                break;
+                        }
+                    }
+                    else{
+                        //광역시일때
+                        switch(i){
+                            case 1:
+                                //시
+                                addr1=address2[i].trim();
+                                break;
+                            case 2:
+                                //시
+                                addr2=address2[i].trim();
+                                break;
+                            case 3:
+                                //시
+                                addr3=address2[i].trim();
+                                addr4="";
+                                break;
+                        }
+                    }
+                }
                 System.out.println(list.get(0).toString());
+                htmlPageUrl = "https://search.naver.com/search.naver?sm=top_hty&fbm=0&ie=utf8&query="+addr1+" "+addr2+" "+addr3+" "+addr4+" 어린이집"; //파싱할 홈페이지의 URL주소
             }
         }
-
-
+        //address 가지고 크롤링하기
+        crawling(v);
+        //주소값 가지고 위치 찍기
+        //getXYfromLocation();
     }
     @Override
     public void onMapReady(final GoogleMap map) {
@@ -132,7 +192,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         // }
 
     }
-
     private class JsoupAsyncTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected void onPreExecute() {
@@ -140,48 +199,64 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
         @Override
         protected Void doInBackground(Void... params) {
+            System.out.println("dollllllllllllllllllllllllllllllllllllllllllllln here");
+            String tmpName="";
+            String tmpAddress="";
+            int curT=0;
             try {
-
                 Document doc = Jsoup.connect(htmlPageUrl).get();
-
-
-                ////테스트1
-                //Elements titles= doc.select("div.news-con h1.tit-news");
-//
-                //System.out.println("-------------------------------------------------------------");
-                //for(Element e: titles){
-                //    System.out.println("title: " + e.text());
-                //    htmlContentInStringFormat += e.text().trim() + "\n";
-                //}
-//
-                ////테스트2
-                //titles= doc.select("div.news-con h2.tit-news");
-//
-                //System.out.println("-------------------------------------------------------------");
-                //for(Element e: titles){
-                //    System.out.println("title: " + e.text());
-                //    htmlContentInStringFormat += e.text().trim() + "\n";
-                //}
-//
-                //테스트3
                 Elements titles= doc.select("ul.lst_map dl.info_area");
-
+                onlyName = new String[titles.size()];
+                onlyAddress = new String[titles.size()];
                 System.out.println("-------------------------------------------------------------");
                 for(Element e: titles){
                     String a = e.text();
                     String name = a.split("보내기")[0];
                     if(name.contains("...")){
                         System.out.println("name= "+ name);
-                        int index = name.lastIndexOf("어");
+                        int index=0;
+                        try{
+                            index = name.lastIndexOf("어");
+                        }catch(StringIndexOutOfBoundsException f){
+                            f.printStackTrace();
+                        }
                         System.out.println("index= "+ index);
-                        name=name.substring(0,index-1);
+                        if(index>2){
+                            //긴 어린이집
+                            name=name.substring(0,index-1);
+                            name=name+"어린이집";
+                        }else{
+                            try{
+                                index=name.lastIndexOf("유");
+                            }catch(StringIndexOutOfBoundsException f2){
+                                f2.printStackTrace();
+                            }
+                            if(index>2){
+                                //긴 유치원
+                                System.out.println("herere index::"+index);
+                                name=name.substring(0,index);
+                                name=name+"유치원";
+                            }
+                        }
                         System.out.println("AFtername= "+ name);
-                        name=name+"어린이집";
                     }
                     System.out.println("title: " + e.text());
                     System.out.println("이름 :"+name);
-                    System.out.println("주소 :"+a.split("열기")[1]);
-                    System.out.println("/////////////////////////////////////////");
+                    tmpName=name;
+                    if(a.contains("열기")){
+                        System.out.println("주소 :"+a.split("열기")[1]);
+                        tmpAddress=a.split("열기")[1];
+                    }
+                    else{
+                        System.out.println("주소 : "+a);
+                        tmpAddress=a;
+                    }
+                    //얻은 주소 넣기
+                    onlyName[curT]=tmpName;
+                    onlyAddress[curT]=tmpAddress;
+                    curT++;
+                    allText=allText+tmpName+" : "+tmpAddress + "\n";
+                    System.out.println("alltext= "+allText);
                     htmlContentInStringFormat += e.text().trim() + "\n";
                 }
                 System.out.println("-------------------------------------------------------------");
@@ -195,12 +270,59 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         @Override
         protected void onPostExecute(Void result) {
             textviewHtmlDocument.setText(htmlContentInStringFormat);
+            textView.setText(allText);
         }
     }
     public void crawling (View v){
         System.out.println( (cnt+1) +"번째 파싱");
         JsoupAsyncTask jsoupAsyncTask = new JsoupAsyncTask();
         jsoupAsyncTask.execute();
+        System.out.println("hereeeeeeeeeeeaalltext"+allText);
+    }
+    public void getXYfromLocation(View v){
+        //주소를 위도 경도로 변환
+        //주소는 allText에 있다.
+        // 주소입력후 지도2버튼 클릭시 해당 위도경도값의 지도화면으로 이동
+        List<Address> list = null;
+        Geocoder geocoder = new Geocoder(this);
+
+        for(int i=0; i<onlyName.length;i++){
+            try {
+                list = geocoder.getFromLocationName
+                        (onlyName[i], // 지역 이름
+                                10); // 읽을 개수
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("test","입출력 오류 - 서버에서 주소변환시 에러발생");
+            }
+            if (list != null) {
+                if (list.size() == 0) {
+                    System.out.println("해당되는 주소 정보는 없습니다");
+                    //tv.setText("해당되는 주소 정보는 없습니다");
+                } else {
+                    // 해당되는 주소로 인텐트 날리기
+                    Address addr = list.get(0);
+                    double lat = addr.getLatitude();
+                    double lon = addr.getLongitude();
+                    System.out.println("lati:"+lat + " //////// lon = "+lon);
+                    String sss = String.format("geo:%f,%f", lat, lon);
+                    System.out.println("name--"+onlyName[i]);
+                    MarkerOptions mOptions = new MarkerOptions();
+                    mOptions.title(onlyName[i]);
+                    mOptions.snippet(onlyName[i]+"입니다");
+                    mOptions.position(new LatLng(lat,lon));
+                    mMap.addMarker(mOptions);
+
+                    //Intent intent = new Intent(
+                    //        Intent.ACTION_VIEW,
+                    //        Uri.parse(sss));
+                    //startActivity(intent);
+                }
+            }
+        }
+        //cur 얘네들 동적해제
+        onlyName = null;
+        onlyAddress = null;
     }
 
 }
