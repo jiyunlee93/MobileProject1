@@ -50,6 +50,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     String allText="";
     String[] onlyName=null;
     String[] onlyAddress=null;
+    String[] onlyNumber=null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -145,7 +146,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         //address 가지고 크롤링하기
         crawling(v);
         //주소값 가지고 위치 찍기
-        //getXYfromLocation();
     }
     @Override
     public void onMapReady(final GoogleMap map) {
@@ -199,7 +199,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
         @Override
         protected Void doInBackground(Void... params) {
-            System.out.println("dollllllllllllllllllllllllllllllllllllllllllllln here");
             String tmpName="";
             String tmpAddress="";
             int curT=0;
@@ -208,7 +207,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 Elements titles= doc.select("ul.lst_map dl.info_area");
                 onlyName = new String[titles.size()];
                 onlyAddress = new String[titles.size()];
-                System.out.println("-------------------------------------------------------------");
+                onlyNumber = new String[titles.size()];
                 for(Element e: titles){
                     String a = e.text();
                     String name = a.split("보내기")[0];
@@ -238,7 +237,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                                 name=name+"유치원";
                             }
                         }
-                        System.out.println("AFtername= "+ name);
                     }
                     System.out.println("title: " + e.text());
                     System.out.println("이름 :"+name);
@@ -252,15 +250,27 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         tmpAddress=a;
                     }
                     //얻은 주소 넣기
-                    onlyName[curT]=tmpName;
-                    onlyAddress[curT]=tmpAddress;
+                    onlyName[curT]=tmpName.trim();
+                    onlyAddress[curT]=tmpAddress.trim();
+                    //번호 얻기
+                    String number1=a.split("보내기")[1].trim();
+                    System.out.println("number1:::::::::::::::::::::::"+number1);
+                    String ad=(onlyAddress[curT]).split(" ")[0].trim();
+                    System.out.println("ad:::::::::::::::::::::::"+ad);
+                    int index=number1.indexOf(ad);
+                    System.out.println("index:::::::::::::::::::::::"+index);
+                    if(index<1){
+                        //전화번호없는경우
+                        onlyNumber[curT]="";
+                    }
+                    else{
+                        String number= number1.substring(0,index);
+                        onlyNumber[curT]=number;
+                    }
                     curT++;
                     allText=allText+tmpName+" : "+tmpAddress + "\n";
-                    System.out.println("alltext= "+allText);
                     htmlContentInStringFormat += e.text().trim() + "\n";
                 }
-                System.out.println("-------------------------------------------------------------");
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -274,10 +284,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
     public void crawling (View v){
-        System.out.println( (cnt+1) +"번째 파싱");
         JsoupAsyncTask jsoupAsyncTask = new JsoupAsyncTask();
         jsoupAsyncTask.execute();
-        System.out.println("hereeeeeeeeeeeaalltext"+allText);
     }
     public void getXYfromLocation(View v){
         //주소를 위도 경도로 변환
@@ -309,7 +317,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     System.out.println("name--"+onlyName[i]);
                     MarkerOptions mOptions = new MarkerOptions();
                     mOptions.title(onlyName[i]);
-                    mOptions.snippet(onlyName[i]+"입니다");
+                    mOptions.snippet(onlyNumber[i]);
                     mOptions.position(new LatLng(lat,lon));
                     mMap.addMarker(mOptions);
 
@@ -323,6 +331,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         //cur 얘네들 동적해제
         onlyName = null;
         onlyAddress = null;
+        onlyNumber=null;
     }
 
 }
