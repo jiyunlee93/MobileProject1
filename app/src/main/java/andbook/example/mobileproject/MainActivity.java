@@ -12,6 +12,7 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -19,6 +20,7 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.jsoup.Jsoup;
@@ -30,7 +32,7 @@ import java.io.IOException;
 import java.util.List;
 
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback{
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback,GoogleMap.OnMarkerClickListener{
 
     // Used to load the 'native-lib' library on application startup.
     static {
@@ -67,8 +69,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void mOnClick(View v){
         //해당 주소 얻기
         CameraPosition carPos=mMap.getCameraPosition();
-        System.out.println("latitude:::::::::::::::::::::::::::::"+ carPos.target.latitude);
-        System.out.println("longitude:"+ carPos.target.longitude);
         textviewHtmlDocument = (TextView)findViewById(R.id.text_crawling);
         textviewHtmlDocument.setMovementMethod(new ScrollingMovementMethod()); //스크롤 가능한 텍스트뷰로 만들기
         textView=(TextView) findViewById(R.id.text_crawling);
@@ -93,7 +93,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             } else {
                 //주소 파싱
                 tv.setText(list.get(0).toString());
-                System.out.println("----------------------------");
                 //앞부분
                 String address = list.get(0).toString().split("]")[0];
                 //뒷부분
@@ -102,7 +101,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 tv.setText(curAddress);
                 String[] address2 = address.split(" ");
                 for(int i=0; i<address2.length;i++){
-                    if(address2[1].trim()=="경기도"){
+                    if(address2[1].trim().contains("경기도") || address2[1].trim().contains("경기")){
                         //경기도일 때
                         addr1="경기도";
                         switch(i){
@@ -111,7 +110,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                                 addr2=address2[i].trim();
                                 break;
                             case 3:
-                                //시
+                                //구
                                 addr3=address2[i].trim();
                                 break;
                             case 4:
@@ -119,8 +118,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                                 addr4=address2[i].trim();
                                 break;
                         }
-                    }
-                    else{
+                    }else{
                         //광역시일때
                         switch(i){
                             case 1:
@@ -139,8 +137,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                     }
                 }
-                System.out.println(list.get(0).toString());
                 htmlPageUrl = "https://search.naver.com/search.naver?sm=top_hty&fbm=0&ie=utf8&query="+addr1+" "+addr2+" "+addr3+" "+addr4+" 어린이집"; //파싱할 홈페이지의 URL주소
+                //System.out.println(list.get(0).toString());
+                System.out.println("query:" + htmlPageUrl);
+
             }
         }
         //address 가지고 크롤링하기
@@ -161,36 +161,42 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         map.moveCamera(CameraUpdateFactory.newLatLng(SEOUL));
         map.animateCamera(CameraUpdateFactory.zoomTo(10));
         CameraPosition carPos=map.getCameraPosition();
-        System.out.println("latitude:::::::::::::::::::::::::::::"+ carPos.target.latitude);
-        System.out.println("longitude:"+ carPos.target.longitude);
 
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+        mMap.setOnMarkerClickListener(this);
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
-            public void onMapClick(LatLng point) {
-                MarkerOptions mOptions = new MarkerOptions();
-
-                // 마커 타이틀
-                mOptions.title("마커 좌표");
-                Double latitude = point.latitude; // 위도
-                Double longitude = point.longitude; // 경도
-                // 마커의 스니펫(간단한 텍스트) 설정
-                mOptions.snippet(latitude.toString() + ", " + longitude.toString());
-                // LatLng: 위도 경도 쌍을 나타냄
-                mOptions.position(new LatLng(latitude, longitude));
-                System.out.println("latitude:::::::::::::::::::::::::::::"+ latitude);
-                System.out.println("longitude:"+ longitude);
-                // 마커(핀) 추가
-                map.addMarker(mOptions);
+            public void onInfoWindowClick(Marker marker) {
+                String number= marker.getSnippet().replace("-","");
+                Intent call = new Intent(Intent.ACTION_DIAL);
+                call.setData(Uri.parse("tel:"+number));
+                startActivity(call);
+                //startActivity(new Intent("android.intent.action.DIAL",Uri.parse("Tel:"+number)));
             }
         });
-        // try{
-        //     List<Address> mResultList=mGeoCoder.getFromLocation(
-        //     )
-        // }catch(IOException e){
-        //     e.printStackTrace();
-        //     System.out.println("주소 변환 실패");
-        // }
+       //{
+       //    @Override
+       //    public void onMapClick(LatLng point) {
+       //        MarkerOptions mOptions = new MarkerOptions();
 
+       //        // 마커 타이틀
+       //        mOptions.title("마커 좌표");
+       //        Double latitude = point.latitude; // 위도
+       //        Double longitude = point.longitude; // 경도
+       //        // 마커의 스니펫(간단한 텍스트) 설정
+       //        mOptions.snippet(latitude.toString() + ", " + longitude.toString());
+       //        // LatLng: 위도 경도 쌍을 나타냄
+       //        mOptions.position(new LatLng(latitude, longitude));
+       //        System.out.println("latitude:::::::::::::::::::::::::::::"+ latitude);
+       //        System.out.println("longitude:"+ longitude);
+       //        // 마커(핀) 추가
+       //        map.addMarker(mOptions);
+       //    }
+       //});
+    }
+    @Override
+    public boolean onMarkerClick(Marker marker){
+        marker.showInfoWindow();
+        return true;
     }
     private class JsoupAsyncTask extends AsyncTask<Void, Void, Void> {
         @Override
@@ -201,6 +207,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         protected Void doInBackground(Void... params) {
             String tmpName="";
             String tmpAddress="";
+            allText="";
             int curT=0;
             try {
                 Document doc = Jsoup.connect(htmlPageUrl).get();
@@ -232,21 +239,22 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                             }
                             if(index>2){
                                 //긴 유치원
-                                System.out.println("herere index::"+index);
                                 name=name.substring(0,index);
                                 name=name+"유치원";
                             }
                         }
                     }
-                    System.out.println("title: " + e.text());
-                    System.out.println("이름 :"+name);
                     tmpName=name;
                     if(a.contains("열기")){
-                        System.out.println("주소 :"+a.split("열기")[1]);
                         tmpAddress=a.split("열기")[1];
+                        if(tmpAddress.contains("지번")){
+                            //지번있는 경우 앞쪽으로
+                            int dex2=tmpAddress.indexOf("지번");
+                            String atmpAddress=tmpAddress.substring(0,dex2);
+                            tmpAddress= atmpAddress;
+                        }
                     }
                     else{
-                        System.out.println("주소 : "+a);
                         tmpAddress=a;
                     }
                     //얻은 주소 넣기
@@ -254,11 +262,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                     onlyAddress[curT]=tmpAddress.trim();
                     //번호 얻기
                     String number1=a.split("보내기")[1].trim();
-                    System.out.println("number1:::::::::::::::::::::::"+number1);
                     String ad=(onlyAddress[curT]).split(" ")[0].trim();
-                    System.out.println("ad:::::::::::::::::::::::"+ad);
+                    System.out.println("이름:"+tmpName.trim());
+                    System.out.println("주소:"+tmpAddress.trim());
+                    System.out.println("번호:"+onlyNumber[curT]);
                     int index=number1.indexOf(ad);
-                    System.out.println("index:::::::::::::::::::::::"+index);
                     if(index<1){
                         //전화번호없는경우
                         onlyNumber[curT]="";
@@ -297,7 +305,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         for(int i=0; i<onlyName.length;i++){
             try {
                 list = geocoder.getFromLocationName
-                        (onlyName[i], // 지역 이름
+                        (onlyAddress[i], // 지역 이름
                                 10); // 읽을 개수
             } catch (IOException e) {
                 e.printStackTrace();
