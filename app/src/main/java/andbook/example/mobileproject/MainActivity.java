@@ -48,23 +48,22 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     String addr3="";
     String addr4="";
     String curAddress="";
-    int cnt=0;
     String allText="";
     String[] onlyName=null;
     String[] onlyAddress=null;
     String[] onlyNumber=null;
+    Marker curMar=null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        DBHelper dbHelper = new DBHelper(getApplicationContext(), "LIKEDB.db", null, 1);
+        dbHelper.delete();
         FragmentManager fragmentManager = getFragmentManager();
         MapFragment mapFragment = (MapFragment)fragmentManager.findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         //SupportMapFragment mapFragment = (SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
         //mapFragment.getMapAsync(this);
-
-
     }
     public void mOnClick(View v){
         //해당 주소 얻기
@@ -147,6 +146,38 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         crawling(v);
         //주소값 가지고 위치 찍기
     }
+    public void addToDB(View v){
+        if(curMar!=null){
+            //onCLicked 되어있을 때
+            DBHelper dbHelper = new DBHelper(getApplicationContext(), "LIKEDB.db", null, 1);
+            final Geocoder geocoder = new Geocoder(this);
+            // 위도,경도 입력 후 변환 버튼 클릭
+            List<Address> list = null;
+            try {
+                double d1 = curMar.getPosition().latitude;
+                double d2 = curMar.getPosition().longitude;
+                list = geocoder.getFromLocation(
+                        d1, // 위도
+                        d2, // 경도
+                        10); // 얻어올 값의 개수
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("test", "입출력 오류 - 서버에서 주소변환시 에러발생");
+            }
+            //get Address again
+            String _address=list.get(0).toString();
+            _address=_address.split("0")[1];
+            _address=_address.split("]")[0];
+            _address=_address.replace("\"","").trim();
+            dbHelper.insert(curMar.getTitle().trim(),curMar.getSnippet().trim(),_address);
+            TextView tvv= (TextView)findViewById(R.id.text_crawling);
+            tvv.setText(dbHelper.getResult());
+        }
+        return ;
+    }
+    public void backToMain(View v){
+        setContentView(R.layout.activity_main);
+    }
     @Override
     public void onMapReady(final GoogleMap map) {
         mMap=map;
@@ -196,6 +227,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public boolean onMarkerClick(Marker marker){
         marker.showInfoWindow();
+        curMar=marker;
         return true;
     }
     private class JsoupAsyncTask extends AsyncTask<Void, Void, Void> {
@@ -287,8 +319,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         protected void onPostExecute(Void result) {
-            textviewHtmlDocument.setText(htmlContentInStringFormat);
-            textView.setText(allText);
+            //textviewHtmlDocument.setText(htmlContentInStringFormat);
+            //textView.setText(allText);
         }
     }
     public void crawling (View v){
@@ -298,7 +330,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void getXYfromLocation(View v){
         //주소를 위도 경도로 변환
         //주소는 allText에 있다.
-        // 주소입력후 지도2버튼 클릭시 해당 위도경도값의 지도화면으로 이동
+        //주소입력후 지도2버튼 클릭시 해당 위도경도값의 지도화면으로 이동
         List<Address> list = null;
         Geocoder geocoder = new Geocoder(this);
 
