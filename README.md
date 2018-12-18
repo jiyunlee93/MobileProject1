@@ -1,5 +1,5 @@
 # MobileProject1
-mobile project1 is 'Location - based Android Application to find Kindergarten Using Web Crawl'
+mobile project1 is 'Location - based Android Application to find Kindergarten Using Web Crawling'
 
 The developer is jiyunlee of Kyunghee University
 This project is for Mobile Programming class
